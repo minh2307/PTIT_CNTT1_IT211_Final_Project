@@ -187,17 +187,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"oldPassword\": \"Password@123\",\n  \"newPassword\": \"NewPassword@123\",\n  \"confirmNewPassword\": \"NewPassword@123\"\n}"
+              "raw": "{\n  \"oldPassword\": \"Password@123\",\n  \"newPassword\": \"NewPassword@123\",\n  \"confirmPassword\": \"NewPassword@123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/change-password",
+              "raw": "{{baseUrl}}/api/v1/users/change-password",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "auth",
+                "users",
                 "change-password"
               ]
             }
@@ -245,7 +245,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"PUT_RESET_TOKEN_HERE\",\n  \"newPassword\": \"Password@123\",\n  \"confirmNewPassword\": \"Password@123\"\n}"
+              "raw": "{\n  \"token\": \"PUT_RESET_TOKEN_HERE\",\n  \"newPassword\": \"Password@123\",\n  \"confirmPassword\": \"Password@123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/reset-password",

@@ -10,7 +10,4 @@ import com.example.finalproject.model.dto.response.LoginResponse;
 public interface AuthenticationService {
     void register(UserRegisterRequest request);
     LoginResponse login(LoginRequest request);
-    void changePassword(ChangePasswordRequest request, String email);
-    String forgotPassword(ForgotPasswordRequest request);
-    void resetPassword(ResetPasswordRequest request);
 }

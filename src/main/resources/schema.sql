@@ -129,6 +129,17 @@
 --     CONSTRAINT fk_materials_lecturer FOREIGN KEY (lecturer_id) REFERENCES users(id) ON DELETE CASCADE
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- -- 11. Password Reset Token Table
+-- CREATE TABLE IF NOT EXISTS password_reset_tokens (
+--     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--     token VARCHAR(255) NOT NULL UNIQUE,
+--     expired_at TIMESTAMP NOT NULL,
+--     used BOOLEAN NOT NULL DEFAULT FALSE,
+--     user_id BIGINT NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     CONSTRAINT fk_password_reset_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO users (full_name, email, password, role, status)
 VALUES ('System Admin', 'admin@gmail.com', '$2a$10$BpoxNmtxjjy/dTVRITcuj.OxE4p1EkVDSZRuDafEYLfABcc43cJ2C', 'ADMIN', 'ACTIVE');
 

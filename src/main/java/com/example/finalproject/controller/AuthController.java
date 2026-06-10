@@ -1,13 +1,16 @@
 package com.example.finalproject.controller;
 
+import com.example.finalproject.model.dto.request.ForgotPasswordRequest;
 import com.example.finalproject.model.dto.request.LoginRequest;
 import com.example.finalproject.model.dto.request.RefreshTokenRequest;
+import com.example.finalproject.model.dto.request.ResetPasswordRequest;
 import com.example.finalproject.model.dto.request.UserRegisterRequest;
 import com.example.finalproject.model.dto.response.ApiResponse;
 import com.example.finalproject.model.dto.response.LoginResponse;
 import com.example.finalproject.model.dto.response.RefreshTokenResponse;
 import com.example.finalproject.service.AuthenticationService;
 import com.example.finalproject.service.LogoutService;
+import com.example.finalproject.service.PasswordService;
 import com.example.finalproject.service.RefreshTokenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,11 +21,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-public class AuthenticationController {
+public class AuthController {
 
     private final AuthenticationService authenticationService;
     private final RefreshTokenService refreshTokenService;
     private final LogoutService logoutService;
+    private final PasswordService passwordService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody UserRegisterRequest request) {
@@ -52,27 +56,16 @@ public class AuthenticationController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/change-password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(
-            @Valid @RequestBody com.example.finalproject.model.dto.request.ChangePasswordRequest request,
-            java.security.Principal principal) {
-        authenticationService.changePassword(request, principal.getName());
-        ApiResponse<Void> response = ApiResponse.success(200, "Password changed successfully");
-        return ResponseEntity.ok(response);
-    }
-
     @PostMapping("/forgot-password")
-    public ResponseEntity<ApiResponse<String>> forgotPassword(
-            @Valid @RequestBody com.example.finalproject.model.dto.request.ForgotPasswordRequest request) {
-        String resetToken = authenticationService.forgotPassword(request);
-        ApiResponse<String> response = ApiResponse.success(200, "Password reset token generated", resetToken);
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordService.forgotPassword(request);
+        ApiResponse<Void> response = ApiResponse.success(200, "Password reset email sent");
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<ApiResponse<Void>> resetPassword(
-            @Valid @RequestBody com.example.finalproject.model.dto.request.ResetPasswordRequest request) {
-        authenticationService.resetPassword(request);
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordService.resetPassword(request);
         ApiResponse<Void> response = ApiResponse.success(200, "Password reset successfully");
         return ResponseEntity.ok(response);
     }
