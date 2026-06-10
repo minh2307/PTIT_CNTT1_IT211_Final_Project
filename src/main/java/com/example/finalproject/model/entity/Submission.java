@@ -20,11 +20,17 @@ public class Submission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "github_url")
     private String githubUrl;
 
-    @Column(name = "note", columnDefinition = "TEXT")
-    private String note;
+    @Column(name = "file_url")
+    private String fileUrl;
 
     @CreationTimestamp
     @Column(name = "submitted_at", nullable = false, updatable = false)
@@ -46,4 +52,12 @@ public class Submission {
 
     @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Grade> grades;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @org.hibernate.annotations.UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

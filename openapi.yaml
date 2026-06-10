@@ -344,6 +344,249 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponsePageEnrollmentResponse'
 
+  /api/v1/auth/change-password:
+    post:
+      summary: Change password for currently logged in user
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Request a password reset token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  message:
+                    type: string
+                  result:
+                    type: string
+
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password using the reset token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/student/projects/{projectId}/submit:
+    post:
+      summary: Submit assignment for a project (STUDENT only)
+      tags:
+        - Student Submission
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                githubUrl:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSubmissionResponse'
+
+  /api/v1/student/submissions:
+    get:
+      summary: List my submissions with pagination (STUDENT only)
+      tags:
+        - Student Submission
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageSubmissionResponse'
+
+  /api/v1/lecturer/submissions/{submissionId}/grade:
+    post:
+      summary: Grade a student submission (LECTURER only)
+      tags:
+        - Lecturer Grading
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GradeRequest'
+      responses:
+        '200':
+          description: Graded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseGradeResponse'
+
+  /api/v1/lecturer/grades:
+    get:
+      summary: List graded submissions with pagination (LECTURER only)
+      tags:
+        - Lecturer Grading
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageGradeResponse'
+
+  /api/v1/lecturer/courses/{courseId}/materials:
+    post:
+      summary: Upload lecture material for a course (LECTURER only)
+      tags:
+        - Course Materials
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - file
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Material uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseLectureMaterialResponse'
+
+  /api/v1/courses/{courseId}/materials:
+    get:
+      summary: List materials for a course (Public for enrolled members)
+      tags:
+        - Course Materials
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListLectureMaterialResponse'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -630,3 +873,221 @@ components:
           type: integer
         studentName:
           type: string
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - oldPassword
+        - newPassword
+        - confirmNewPassword
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+        confirmNewPassword:
+          type: string
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - newPassword
+        - confirmNewPassword
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+        confirmNewPassword:
+          type: string
+
+    GradeRequest:
+      type: object
+      required:
+        - score
+      properties:
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        feedback:
+          type: string
+
+    ApiResponseSubmissionResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          $ref: '#/components/schemas/SubmissionResponse'
+
+    SubmissionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        githubUrl:
+          type: string
+        fileUrl:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        score:
+          type: number
+        status:
+          type: string
+        studentId:
+          type: integer
+        studentName:
+          type: string
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponsePageSubmissionResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/SubmissionResponse'
+            totalPages:
+              type: integer
+            totalElements:
+              type: integer
+
+    ApiResponseGradeResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          $ref: '#/components/schemas/GradeResponse'
+
+    GradeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        score:
+          type: number
+        feedback:
+          type: string
+        gradedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        submissionId:
+          type: integer
+        graderId:
+          type: integer
+        graderName:
+          type: string
+
+    ApiResponsePageGradeResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/GradeResponse'
+            totalPages:
+              type: integer
+            totalElements:
+              type: integer
+
+    ApiResponseLectureMaterialResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          $ref: '#/components/schemas/LectureMaterialResponse'
+
+    LectureMaterialResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        fileUrl:
+          type: string
+        fileType:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        courseId:
+          type: integer
+        courseName:
+          type: string
+        lecturerId:
+          type: integer
+        lecturerName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponseListLectureMaterialResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/LectureMaterialResponse'

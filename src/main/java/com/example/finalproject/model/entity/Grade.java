@@ -29,6 +29,9 @@ public class Grade {
     @Column(name = "graded_at", nullable = false, updatable = false)
     private LocalDateTime gradedAt;
 
+    @Column(name = "status")
+    private String status;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "submission_id", nullable = false)
     private Submission submission;

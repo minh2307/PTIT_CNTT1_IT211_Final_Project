@@ -54,6 +54,7 @@
 --     description TEXT,
 --     status VARCHAR(50) NOT NULL,
 --     course_id BIGINT NOT NULL,
+--     deadline TIMESTAMP NULL,
 --     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 --     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 --     CONSTRAINT fk_projects_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
@@ -62,13 +63,17 @@
 -- -- 6. Submission Table
 -- CREATE TABLE IF NOT EXISTS submissions (
 --     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--     title VARCHAR(255) NOT NULL,
+--     description TEXT,
 --     github_url VARCHAR(255),
---     note TEXT,
+--     file_url VARCHAR(255),
 --     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 --     score DOUBLE,
 --     status VARCHAR(50) NOT NULL,
 --     user_id BIGINT NOT NULL,
 --     project_id BIGINT NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 --     CONSTRAINT fk_submissions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
 --     CONSTRAINT fk_submissions_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -79,8 +84,11 @@
 --     score DOUBLE NOT NULL,
 --     feedback TEXT,
 --     graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     status VARCHAR(50) NOT NULL,
 --     submission_id BIGINT NOT NULL,
 --     grader_id BIGINT NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 --     CONSTRAINT fk_grades_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
 --     CONSTRAINT fk_grades_grader FOREIGN KEY (grader_id) REFERENCES users(id) ON DELETE CASCADE
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -102,6 +110,23 @@
 --     user_id BIGINT NOT NULL,
 --     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 --     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -- 10. Lecture Material Table
+-- CREATE TABLE IF NOT EXISTS lecture_materials (
+--     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--     title VARCHAR(255) NOT NULL,
+--     description TEXT,
+--     file_url VARCHAR(255) NOT NULL,
+--     file_type VARCHAR(50) NOT NULL,
+--     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     status VARCHAR(50) NOT NULL,
+--     course_id BIGINT NOT NULL,
+--     lecturer_id BIGINT NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--     CONSTRAINT fk_materials_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+--     CONSTRAINT fk_materials_lecturer FOREIGN KEY (lecturer_id) REFERENCES users(id) ON DELETE CASCADE
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO users (full_name, email, password, role, status)

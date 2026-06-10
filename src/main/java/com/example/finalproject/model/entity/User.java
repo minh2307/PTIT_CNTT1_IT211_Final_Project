@@ -52,6 +52,9 @@ public class User {
     @OneToMany(mappedBy = "grader", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Grade> gradedGrades;
 
+    @OneToMany(mappedBy = "lecturer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LectureMaterial> lectureMaterials;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RefreshToken> refreshTokens;
 

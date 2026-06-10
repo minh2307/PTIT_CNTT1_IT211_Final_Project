@@ -6,39 +6,46 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
-@Table(name = "projects")
+@Table(name = "lecture_materials")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
 @Builder
-public class Project {
+public class LectureMaterial {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "project_name", nullable = false)
-    private String projectName;
+    @Column(name = "title", nullable = false)
+    private String title;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "status", nullable = false)
-    private String status; // String directly instead of Enum (e.g., "OPEN", "CLOSED")
+    @Column(name = "file_url", nullable = false)
+    private String fileUrl;
 
-    @Column(name = "deadline")
-    private LocalDateTime deadline;
+    @Column(name = "file_type", nullable = false)
+    private String fileType; // pdf, docx, pptx, zip
+
+    @CreationTimestamp
+    @Column(name = "uploaded_at", nullable = false, updatable = false)
+    private LocalDateTime uploadedAt;
+
+    @Column(name = "status", nullable = false)
+    private String status; // String (e.g., "ACTIVE", "ARCHIVED")
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Submission> submissions;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lecturer_id", nullable = false)
+    private User lecturer; // User with LECTURER/TEACHER role
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

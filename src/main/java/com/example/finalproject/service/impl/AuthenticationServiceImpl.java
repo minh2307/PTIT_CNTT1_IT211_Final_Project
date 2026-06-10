@@ -1,7 +1,10 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
+import com.example.finalproject.model.dto.request.ChangePasswordRequest;
+import com.example.finalproject.model.dto.request.ForgotPasswordRequest;
 import com.example.finalproject.model.dto.request.LoginRequest;
+import com.example.finalproject.model.dto.request.ResetPasswordRequest;
 import com.example.finalproject.model.dto.request.UserRegisterRequest;
 import com.example.finalproject.model.dto.response.LoginResponse;
 import com.example.finalproject.model.entity.User;
@@ -72,5 +75,52 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequest request, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Incorrect old password");
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Confirm new password does not match new password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found with this email"));
+
+        // Generate a reset token using the jwtService (which contains the user's email)
+        return jwtService.generateAccessToken(user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        if (!jwtService.validateToken(request.getToken())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Invalid or expired password reset token");
+        }
+
+        String email = jwtService.getUsernameFromToken(request.getToken());
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Confirm new password does not match new password");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

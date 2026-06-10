@@ -51,4 +51,29 @@ public class AuthenticationController {
         ApiResponse<Void> response = ApiResponse.success(200, "Logout successfully");
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody com.example.finalproject.model.dto.request.ChangePasswordRequest request,
+            java.security.Principal principal) {
+        authenticationService.changePassword(request, principal.getName());
+        ApiResponse<Void> response = ApiResponse.success(200, "Password changed successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(
+            @Valid @RequestBody com.example.finalproject.model.dto.request.ForgotPasswordRequest request) {
+        String resetToken = authenticationService.forgotPassword(request);
+        ApiResponse<String> response = ApiResponse.success(200, "Password reset token generated", resetToken);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody com.example.finalproject.model.dto.request.ResetPasswordRequest request) {
+        authenticationService.resetPassword(request);
+        ApiResponse<Void> response = ApiResponse.success(200, "Password reset successfully");
+        return ResponseEntity.ok(response);
+    }
 }
