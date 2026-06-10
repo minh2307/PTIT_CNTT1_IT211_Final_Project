@@ -1,7 +1,6 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
-import com.example.finalproject.mapper.ClassRoomMapper;
 import com.example.finalproject.model.dto.request.ClassRoomRequest;
 import com.example.finalproject.model.dto.response.ClassRoomResponse;
 import com.example.finalproject.model.entity.ClassRoom;
@@ -27,29 +26,32 @@ public class ClassRoomServiceImpl implements ClassRoomService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Class code is already registered");
         }
 
-        ClassRoom classRoom = ClassRoomMapper.toClassRoom(request);
+        ClassRoom classRoom = ClassRoom.builder()
+                .classCode(request.getClassCode())
+                .className(request.getClassName())
+                .description(request.getDescription())
+                .status(request.getStatus())
+                .build();
+
         ClassRoom savedClass = classRoomRepository.save(classRoom);
-        return ClassRoomMapper.toClassRoomResponse(savedClass);
+        return toClassRoomResponse(savedClass);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ClassRoomResponse> listClasses(String keyword, Pageable pageable) {
-        Page<ClassRoom> classes;
         if (keyword != null && !keyword.trim().isEmpty()) {
-            classes = classRoomRepository.findByClassCodeContainingIgnoreCaseOrClassNameContainingIgnoreCase(keyword, keyword, pageable);
+            return classRoomRepository.findByKeywordProjected(keyword, pageable);
         } else {
-            classes = classRoomRepository.findAll(pageable);
+            return classRoomRepository.findAllProjected(pageable);
         }
-        return classes.map(ClassRoomMapper::toClassRoomResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public ClassRoomResponse getClassById(Long id) {
-        ClassRoom classRoom = classRoomRepository.findById(id)
+        return classRoomRepository.findDtoById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Classroom not found"));
-        return ClassRoomMapper.toClassRoomResponse(classRoom);
     }
 
     @Override
@@ -68,7 +70,7 @@ public class ClassRoomServiceImpl implements ClassRoomService {
         classRoom.setStatus(request.getStatus());
 
         ClassRoom updatedClass = classRoomRepository.save(classRoom);
-        return ClassRoomMapper.toClassRoomResponse(updatedClass);
+        return toClassRoomResponse(updatedClass);
     }
 
     @Override
@@ -78,5 +80,20 @@ public class ClassRoomServiceImpl implements ClassRoomService {
             throw new AppException(HttpStatus.NOT_FOUND, "Classroom not found");
         }
         classRoomRepository.deleteById(id);
+    }
+
+    private ClassRoomResponse toClassRoomResponse(ClassRoom classRoom) {
+        if (classRoom == null) {
+            return null;
+        }
+        return ClassRoomResponse.builder()
+                .id(classRoom.getId())
+                .classCode(classRoom.getClassCode())
+                .className(classRoom.getClassName())
+                .description(classRoom.getDescription())
+                .status(classRoom.getStatus())
+                .createdAt(classRoom.getCreatedAt())
+                .updatedAt(classRoom.getUpdatedAt())
+                .build();
     }
 }

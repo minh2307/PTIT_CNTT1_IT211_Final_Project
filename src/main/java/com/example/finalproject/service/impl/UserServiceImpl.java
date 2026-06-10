@@ -1,7 +1,6 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
-import com.example.finalproject.mapper.UserMapper;
 import com.example.finalproject.model.dto.request.UserCreateRequest;
 import com.example.finalproject.model.dto.request.UserUpdateRequest;
 import com.example.finalproject.model.dto.response.UserResponse;
@@ -33,8 +32,14 @@ public class UserServiceImpl implements UserService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Email is already registered");
         }
 
-        User user = UserMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getPhoneNumber())
+                .role(request.getRole())
+                .status(request.getStatus())
+                .build();
 
         if (request.getClassRoomId() != null) {
             ClassRoom classRoom = classRoomRepository.findById(request.getClassRoomId())
@@ -43,27 +48,24 @@ public class UserServiceImpl implements UserService {
         }
 
         User savedUser = userRepository.save(user);
-        return UserMapper.toUserResponse(savedUser);
+        return toUserResponse(savedUser);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> listUsers(String keyword, Pageable pageable) {
-        Page<User> users;
         if (keyword != null && !keyword.trim().isEmpty()) {
-            users = userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword, pageable);
+            return userRepository.findByKeywordProjected(keyword, pageable);
         } else {
-            users = userRepository.findAll(pageable);
+            return userRepository.findAllProjected(pageable);
         }
-        return users.map(UserMapper::toUserResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
-        User user = userRepository.findById(id)
+        return userRepository.findDtoById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
-        return UserMapper.toUserResponse(user);
     }
 
     @Override
@@ -95,7 +97,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User updatedUser = userRepository.save(user);
-        return UserMapper.toUserResponse(updatedUser);
+        return toUserResponse(updatedUser);
     }
 
     @Override
@@ -105,5 +107,24 @@ public class UserServiceImpl implements UserService {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
         userRepository.deleteById(id);
+    }
+
+    private UserResponse toUserResponse(User user) {
+        if (user == null) {
+            return null;
+        }
+        return UserResponse.builder()
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .role(user.getRole())
+                .status(user.getStatus())
+                .classRoomId(user.getClassRoom() != null ? user.getClassRoom().getId() : null)
+                .classCode(user.getClassRoom() != null ? user.getClassRoom().getClassCode() : null)
+                .className(user.getClassRoom() != null ? user.getClassRoom().getClassName() : null)
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
     }
 }

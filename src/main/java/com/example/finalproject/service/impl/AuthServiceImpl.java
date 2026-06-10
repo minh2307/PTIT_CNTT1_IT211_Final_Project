@@ -1,7 +1,6 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
-import com.example.finalproject.mapper.UserMapper;
 import com.example.finalproject.model.dto.request.LoginRequest;
 import com.example.finalproject.model.dto.request.UserRegisterRequest;
 import com.example.finalproject.model.dto.response.LoginResponse;
@@ -34,8 +33,14 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Email is already registered");
         }
 
-        User user = UserMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getPhoneNumber())
+                .role("STUDENT")
+                .status("ACTIVE")
+                .build();
         
         userRepository.save(user);
     }

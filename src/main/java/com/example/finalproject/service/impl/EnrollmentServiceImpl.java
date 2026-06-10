@@ -1,7 +1,6 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
-import com.example.finalproject.mapper.EnrollmentMapper;
 import com.example.finalproject.model.dto.response.EnrollmentResponse;
 import com.example.finalproject.model.entity.Course;
 import com.example.finalproject.model.entity.Enrollment;
@@ -66,7 +65,6 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         User user = userRepository.findByEmail(studentEmail)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Student not found"));
 
-        Page<Enrollment> enrollments = enrollmentRepository.findByUserId(user.getId(), pageable);
-        return enrollments.map(EnrollmentMapper::toEnrollmentResponse);
+        return enrollmentRepository.findDtoByUserId(user.getId(), pageable);
     }
 }
