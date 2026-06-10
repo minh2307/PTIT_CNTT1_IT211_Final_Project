@@ -1,0 +1,632 @@
+openapi: 3.0.0
+info:
+  title: Course Management & Project Grading System API
+  description: API documentation for the final project covering Student Registration, Admin User/Classroom Management, and Course Enrollment.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local Development Server
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register a new student account
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '400':
+          description: Bad request (e.g., validation failure, passwords mismatch, email exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/auth/login:
+    post:
+      summary: Login to obtain JWT tokens
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseLoginResponse'
+        '401':
+          description: Unauthorized (invalid credentials)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/admin/users:
+    post:
+      summary: Create a new user (ADMIN only)
+      tags:
+        - Admin User Management
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserResponse'
+    get:
+      summary: List users with pagination, sorting, and search (ADMIN only)
+      tags:
+        - Admin User Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: Search by fullName or email
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: id
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+            default: asc
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageUserResponse'
+
+  /api/v1/admin/users/{id}:
+    get:
+      summary: Get user details (ADMIN only)
+      tags:
+        - Admin User Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserResponse'
+    put:
+      summary: Update user details (ADMIN only)
+      tags:
+        - Admin User Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseUserResponse'
+    delete:
+      summary: Delete user (ADMIN only)
+      tags:
+        - Admin User Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/admin/classes:
+    post:
+      summary: Create a classroom (ADMIN only)
+      tags:
+        - Admin Class Management
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassRoomRequest'
+      responses:
+        '201':
+          description: Classroom created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseClassRoomResponse'
+    get:
+      summary: List classrooms with pagination and search (ADMIN only)
+      tags:
+        - Admin Class Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: Search by classCode or className
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageClassRoomResponse'
+
+  /api/v1/admin/classes/{id}:
+    get:
+      summary: Get classroom details (ADMIN only)
+      tags:
+        - Admin Class Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseClassRoomResponse'
+    put:
+      summary: Update classroom (ADMIN only)
+      tags:
+        - Admin Class Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassRoomRequest'
+      responses:
+        '200':
+          description: Classroom updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseClassRoomResponse'
+    delete:
+      summary: Delete classroom (ADMIN only)
+      tags:
+        - Admin Class Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Classroom deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/student/courses/{courseId}/enroll:
+    post:
+      summary: Enroll in a course (STUDENT only)
+      tags:
+        - Student Course Enrollment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Enrolled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+
+  /api/v1/student/enrollments:
+    get:
+      summary: List enrolled courses with pagination (STUDENT only)
+      tags:
+        - Student Course Enrollment
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageEnrollmentResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UserRegisterRequest:
+      type: object
+      required:
+        - fullName
+        - email
+        - password
+        - confirmPassword
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        confirmPassword:
+          type: string
+        phoneNumber:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    UserCreateRequest:
+      type: object
+      required:
+        - fullName
+        - email
+        - password
+        - role
+        - status
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        phoneNumber:
+          type: string
+        role:
+          type: string
+          enum: [STUDENT, TEACHER, ADMIN]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        classRoomId:
+          type: integer
+
+    UserUpdateRequest:
+      type: object
+      required:
+        - fullName
+        - email
+        - role
+        - status
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        phoneNumber:
+          type: string
+        role:
+          type: string
+          enum: [STUDENT, TEACHER, ADMIN]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        classRoomId:
+          type: integer
+
+    ClassRoomRequest:
+      type: object
+      required:
+        - classCode
+        - className
+        - status
+      properties:
+        classCode:
+          type: string
+        className:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+    ApiResponseVoid:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+
+    ApiResponseLoginResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          $ref: '#/components/schemas/LoginResponse'
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+
+    ApiResponseUserResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          $ref: '#/components/schemas/UserResponse'
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        classRoomId:
+          type: integer
+        classCode:
+          type: string
+        className:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponseClassRoomResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          $ref: '#/components/schemas/ClassRoomResponse'
+
+    ClassRoomResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        classCode:
+          type: string
+        className:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiResponsePageUserResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserResponse'
+            totalPages:
+              type: integer
+            totalElements:
+              type: integer
+
+    ApiResponsePageClassRoomResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/ClassRoomResponse'
+            totalPages:
+              type: integer
+            totalElements:
+              type: integer
+
+    ApiResponsePageEnrollmentResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        result:
+          type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/EnrollmentResponse'
+            totalPages:
+              type: integer
+            totalElements:
+              type: integer
+
+    EnrollmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        enrolledAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        courseId:
+          type: integer
+        courseCode:
+          type: string
+        courseName:
+          type: string
+        studentId:
+          type: integer
+        studentName:
+          type: string
