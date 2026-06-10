@@ -43,5 +43,6 @@ hs_err_pid*
 
 # Agent configurations
 .agents/
+skills-lock.json
 
 promt.md
