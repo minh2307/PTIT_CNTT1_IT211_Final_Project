@@ -6,7 +6,8 @@ import com.example.finalproject.model.dto.request.UserRegisterRequest;
 import com.example.finalproject.model.dto.response.LoginResponse;
 import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.UserRepository;
-import com.example.finalproject.security.jwt.JwtUtils;
+import com.example.finalproject.security.jwt.JwtService;
+import com.example.finalproject.service.RefreshTokenService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,7 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class AuthServiceImplTest {
+public class AuthenticationServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
@@ -31,10 +32,13 @@ public class AuthServiceImplTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtService jwtService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
-    private AuthServiceImpl authService;
+    private AuthenticationServiceImpl authenticationService;
 
     @Test
     void register_Success() {
@@ -49,7 +53,7 @@ public class AuthServiceImplTest {
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
 
-        assertDoesNotThrow(() -> authService.register(request));
+        assertDoesNotThrow(() -> authenticationService.register(request));
 
         verify(userRepository, times(1)).save(any(User.class));
     }
@@ -63,7 +67,7 @@ public class AuthServiceImplTest {
                 .confirmPassword("Different@123")
                 .build();
 
-        AppException exception = assertThrows(AppException.class, () -> authService.register(request));
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.register(request));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
         assertEquals("Confirm password does not match password", exception.getMessage());
 
@@ -81,7 +85,7 @@ public class AuthServiceImplTest {
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
 
-        AppException exception = assertThrows(AppException.class, () -> authService.register(request));
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.register(request));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
         assertEquals("Email is already registered", exception.getMessage());
 
@@ -100,16 +104,18 @@ public class AuthServiceImplTest {
 
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
-        when(jwtUtils.generateAccessToken(user.getEmail())).thenReturn("accessToken");
-        when(jwtUtils.generateToken(eq(user.getEmail()), anyLong())).thenReturn("refreshToken");
+        when(jwtService.generateAccessToken(user.getEmail())).thenReturn("accessToken");
+        when(refreshTokenService.createRefreshToken(user)).thenReturn("refreshToken");
+        when(jwtService.getExpirationTimeSeconds()).thenReturn(3600L);
 
-        LoginResponse response = authService.login(request);
+        LoginResponse response = authenticationService.login(request);
 
         assertNotNull(response);
         assertEquals("accessToken", response.getAccessToken());
         assertEquals("refreshToken", response.getRefreshToken());
         assertEquals("STUDENT", response.getRole());
         assertEquals("a@gmail.com", response.getEmail());
+        assertEquals(3600L, response.getExpiresIn());
     }
 
     @Test
@@ -124,7 +130,7 @@ public class AuthServiceImplTest {
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(false);
 
-        AppException exception = assertThrows(AppException.class, () -> authService.login(request));
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.login(request));
         assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
         assertEquals("Invalid email or password", exception.getMessage());
     }
@@ -141,7 +147,7 @@ public class AuthServiceImplTest {
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
 
-        AppException exception = assertThrows(AppException.class, () -> authService.login(request));
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.login(request));
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
         assertEquals("Your account has been deactivated", exception.getMessage());
     }

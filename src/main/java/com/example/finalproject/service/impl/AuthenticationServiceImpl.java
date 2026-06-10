@@ -6,8 +6,9 @@ import com.example.finalproject.model.dto.request.UserRegisterRequest;
 import com.example.finalproject.model.dto.response.LoginResponse;
 import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.UserRepository;
-import com.example.finalproject.security.jwt.JwtUtils;
-import com.example.finalproject.service.AuthService;
+import com.example.finalproject.security.jwt.JwtService;
+import com.example.finalproject.service.AuthenticationService;
+import com.example.finalproject.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,11 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl implements AuthService {
+public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtils jwtUtils;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Transactional
@@ -41,12 +43,12 @@ public class AuthServiceImpl implements AuthService {
                 .role("STUDENT")
                 .status("ACTIVE")
                 .build();
-        
+
         userRepository.save(user);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
@@ -59,12 +61,14 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(HttpStatus.FORBIDDEN, "Your account has been deactivated");
         }
 
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail());
-        String refreshToken = jwtUtils.generateToken(user.getEmail(), 7 * 24 * 60 * 60 * 1000L); // 7 days expiration
+        String accessToken = jwtService.generateAccessToken(user.getEmail());
+        String refreshToken = refreshTokenService.createRefreshToken(user);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtService.getExpirationTimeSeconds())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .build();

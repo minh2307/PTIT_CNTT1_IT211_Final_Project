@@ -104,3 +104,11 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT IGNORE INTO users (full_name, email, password, role, status)
+VALUES ('System Admin', 'admin@gmail.com', '$2a$10$BpoxNmtxjjy/dTVRITcuj.OxE4p1EkVDSZRuDafEYLfABcc43cJ2C', 'ADMIN', 'ACTIVE');
+
+INSERT IGNORE INTO courses (id, course_code, course_name, description, max_students, status)
+VALUES 
+(1, 'CS101', 'Introduction to Java programming', 'Basic Java concepts, variables, loops, OOP', 50, 'OPEN'),
+(2, 'SE202', 'Software Engineering', 'Design patterns, Agile, Git, testing', 30, 'OPEN'),
+(3, 'DB303', 'Database Management Systems', 'MySQL, Indexing, Transactions, normalization', 40, 'OPEN');

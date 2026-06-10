@@ -1,24 +1,26 @@
-Bạn là Senior Java Backend Developer với 10+ năm kinh nghiệm về Spring Boot, Spring Security, JPA/Hibernate, MySQL.
+Bạn là Senior Java Backend Developer với 10+ năm kinh nghiệm về Spring Boot 3, Spring Security 6, JWT, Refresh Token và MySQL.
 
-Hãy triển khai các chức năng sau theo đúng tài liệu SRS của dự án Course Management and Project Grading System.
+Dựa trên SRS của dự án Course Management & Project Grading System, hãy triển khai đầy đủ các chức năng xác thực sau:
 
-## Yêu cầu chung
+* FR-01 Đăng nhập hệ thống (Cấp phát JWT)
+* FR-02 Xoay vòng Token (Refresh Token Rotation)
+* FR-03 Đăng xuất (Revoke Token)
 
-### Công nghệ
+=================================================
+
+YÊU CẦU CHUNG
+
+Công nghệ:
 
 * Java 17
 * Spring Boot 3.x
+* Spring Security 6
 * Spring Data JPA
-* Spring Security + JWT
 * MySQL
 * Lombok
-* Validation
-* MapStruct (nếu cần)
-* Maven
+* JWT (jjwt)
 
-### Kiến trúc dự án
-
-Áp dụng kiến trúc:
+Kiến trúc:
 
 controller
 service
@@ -29,234 +31,242 @@ dto.request
 dto.response
 security
 exception
-mapper
 config
 
-### Quy tắc code
+Quy tắc:
 
-* Tuân thủ RESTful API
-* Sử dụng ResponseEntity
-* Validation bằng Bean Validation
-* Xử lý exception bằng @RestControllerAdvice
-* Soft Delete nếu phù hợp
-* Phân trang bằng Pageable
-* API trả về ApiResponse<T>
-* Viết đầy đủ:
+* Stateless Authentication
+* JWT Access Token
+* Refresh Token lưu Database
+* Token Blacklist lưu Database
+* Không sử dụng Enum
+* role lưu String:
 
-  * Entity
-  * DTO Request
-  * DTO Response
-  * Repository
-  * Service
-  * ServiceImpl
-  * Controller
-  * Mapper
-  * Exception
+  * ADMIN
+  * STUDENT
+  * LECTURER
 
----
+=================================================
 
-# FR-04 Đăng ký tài khoản Sinh viên mới
+FR-01 ĐĂNG NHẬP HỆ THỐNG (CẤP PHÁT JWT)
 
-## Mô tả nghiệp vụ
+Mô tả:
 
-Sinh viên có thể tự đăng ký tài khoản.
+Người dùng đăng nhập bằng email và password.
 
-Thông tin đăng ký:
+API:
 
-* fullName
-* email
-* password
-* confirmPassword
-* phoneNumber
-
-## Quy tắc nghiệp vụ
-
-* Email không được trùng.
-* Email đúng định dạng.
-* Password tối thiểu 8 ký tự.
-* Password phải chứa:
-
-  * chữ hoa
-  * chữ thường
-  * số
-* confirmPassword phải khớp password.
-* Role mặc định là STUDENT.
-* Status mặc định là ACTIVE.
-* Mật khẩu phải mã hóa bằng BCryptPasswordEncoder.
-
-## API
-
-POST /api/v1/auth/register
+POST /api/v1/auth/login
 
 Request:
 
 {
-"fullName": "Nguyen Van A",
-"email": "[a@gmail.com](mailto:a@gmail.com)",
-"password": "Password@123",
-"confirmPassword": "Password@123",
-"phoneNumber": "0123456789"
+"email": "[student@gmail.com](mailto:student@gmail.com)",
+"password": "Password@123"
 }
+
+Business Rules:
+
+* Email phải tồn tại.
+* Password phải đúng.
+* User phải ở trạng thái ACTIVE.
+* Password được kiểm tra bằng BCryptPasswordEncoder.
+
+Khi đăng nhập thành công:
+
+Sinh:
+
+* Access Token
+* Refresh Token
+
+Lưu Refresh Token xuống database.
 
 Response:
 
 {
-"code": 201,
-"message": "Register success"
+"accessToken": "...",
+"refreshToken": "...",
+"tokenType": "Bearer",
+"expiresIn": 3600
 }
 
----
+Lỗi:
 
-# FR-05 Quản lý Người dùng & Lớp học
+401 Unauthorized
 
-Chỉ ADMIN được phép sử dụng.
+=================================================
 
-## User Management
+FR-02 XOAY VÒNG TOKEN (REFRESH TOKEN ROTATION)
 
-### API
+Mô tả:
 
-1. Tạo User
+Khi Access Token hết hạn, client sử dụng Refresh Token để lấy Access Token mới.
 
-POST /api/v1/admin/users
+API:
 
-2. Danh sách User
+POST /api/v1/auth/refresh-token
 
-GET /api/v1/admin/users
+Request:
 
-Yêu cầu:
+{
+"refreshToken": "xxxxxxxx"
+}
 
-* Pagination
-* Sorting
-* Search theo:
+Business Rules:
 
-  * fullName
-  * email
+Kiểm tra:
 
-Ví dụ:
+* Refresh Token tồn tại.
+* Chưa hết hạn.
+* revoked = false.
 
-GET /api/v1/admin/users?page=0&size=10&keyword=minh
+Nếu hợp lệ:
 
-3. Chi tiết User
+1. Thu hồi Refresh Token cũ.
+2. Sinh Refresh Token mới.
+3. Sinh Access Token mới.
+4. Lưu Refresh Token mới xuống DB.
 
-GET /api/v1/admin/users/{id}
+Refresh Token Rotation bắt buộc.
 
-4. Cập nhật User
+Response:
 
-PUT /api/v1/admin/users/{id}
+{
+"accessToken": "...",
+"refreshToken": "...",
+"tokenType": "Bearer",
+"expiresIn": 3600
+}
 
-5. Xóa User
+Lỗi:
 
-DELETE /api/v1/admin/users/{id}
+401 Unauthorized
 
----
+=================================================
 
-## Class Management
+FR-03 ĐĂNG XUẤT (REVOKE TOKEN)
 
-Entity ClassRoom
+Mô tả:
 
-Thuộc tính:
+Người dùng đăng xuất khỏi hệ thống.
+
+API:
+
+POST /api/v1/auth/logout
+
+Header:
+
+Authorization: Bearer <access_token>
+
+Business Rules:
+
+1. Lấy Access Token từ Header.
+2. Kiểm tra token hợp lệ.
+3. Lưu Access Token vào TokenBlacklist.
+4. Revoke tất cả Refresh Token còn hiệu lực của user.
+5. Xóa SecurityContext.
+
+Response:
+
+{
+"message": "Logout successfully"
+}
+
+Lỗi:
+
+401 Unauthorized
+
+=================================================
+
+ENTITY
+
+User
 
 * id
-* classCode
-* className
-* description
+* fullName
+* email
+* password
+* phoneNumber
+* role
+* status
 * createdAt
 * updatedAt
 
-### API
-
-POST /api/v1/admin/classes
-
-GET /api/v1/admin/classes
-
-GET /api/v1/admin/classes/{id}
-
-PUT /api/v1/admin/classes/{id}
-
-DELETE /api/v1/admin/classes/{id}
-
-Yêu cầu:
-
-* Pagination
-* Search theo:
-
-  * classCode
-  * className
-
----
-
-# FR-06 Đăng ký tham gia khóa học
-
-Sinh viên đăng ký tham gia khóa học.
-
-## Entity
-
-Course
+RefreshToken
 
 * id
-* courseCode
-* courseName
-* description
-* maxStudents
-* status
+* token
+* expiredAt
+* revoked
+* createdAt
 
-Enrollment
+ManyToOne User
+
+TokenBlacklist
 
 * id
-* student
-* course
-* enrolledAt
-* status
+* token
+* expiredAt
+* createdAt
 
-## Quy tắc nghiệp vụ
+=================================================
 
-* Chỉ STUDENT được đăng ký.
-* Không được đăng ký trùng khóa học.
-* Khóa học phải tồn tại.
-* Khóa học phải ở trạng thái OPEN.
-* Số lượng học viên không vượt quá maxStudents.
+SECURITY
 
-## API
+Public APIs
 
-POST /api/v1/student/courses/{courseId}/enroll
+/auth/login
+/auth/register
+/auth/refresh-token
 
-Response:
+ADMIN
 
-{
-"code": 200,
-"message": "Enroll successfully"
-}
+/api/v1/admin/**
 
-## API xem danh sách khóa học đã đăng ký
+STUDENT
 
-GET /api/v1/student/enrollments
+/api/v1/student/**
 
-Có phân trang.
+LECTURER
 
----
+/api/v1/lecturer/**
 
-# Yêu cầu bổ sung
+=================================================
 
-1. Thiết kế ERD.
-2. Thiết kế Entity Relationship.
-3. Viết SQL tạo database MySQL.
-4. Viết đầy đủ source code theo từng phần.
-5. Viết Postman Collection.
-6. Viết Swagger OpenAPI.
-7. Viết Security Config phân quyền:
+YÊU CẦU SINH CODE
 
-ADMIN:
+Hãy tạo đầy đủ:
 
-* Quản lý User
-* Quản lý Class
+1. LoginRequest
+2. LoginResponse
+3. RefreshTokenRequest
+4. RefreshTokenResponse
+5. AuthenticationController
+6. AuthenticationService
+7. AuthenticationServiceImpl
+8. RefreshTokenService
+9. LogoutService
+10. JwtService
+11. JwtAuthenticationFilter
+12. SecurityConfig
+13. UserDetailsService
+14. RefreshTokenRepository
+15. TokenBlacklistRepository
+16. Exception Handling
+17. AuthenticationEntryPoint
+18. AccessDeniedHandler
 
-STUDENT:
+=================================================
 
-* Đăng ký khóa học
-* Xem khóa học đã đăng ký
+YÊU CẦU BỔ SUNG
 
-8. Áp dụng JWT Authentication.
+* Sử dụng Spring Security 6 chuẩn mới.
+* Không dùng WebSecurityConfigurerAdapter.
+* Sử dụng SecurityFilterChain.
+* Dùng BCryptPasswordEncoder.
+* Dùng AuthenticationManager.
+* Kiểm tra TokenBlacklist trong JwtAuthenticationFilter.
+* Giải thích luồng:
+  Login → Access Token → Refresh Token → Refresh Rotation → Logout → Blacklist.
+* Viết thêm Postman Collection cho 3 chức năng trên.
 
-9. Viết unit test cho Service Layer.
-
-10. Giải thích ngắn gọn luồng xử lý của từng API.

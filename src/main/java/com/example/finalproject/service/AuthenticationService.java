@@ -4,7 +4,7 @@ import com.example.finalproject.model.dto.request.LoginRequest;
 import com.example.finalproject.model.dto.request.UserRegisterRequest;
 import com.example.finalproject.model.dto.response.LoginResponse;
 
-public interface AuthService {
+public interface AuthenticationService {
     void register(UserRegisterRequest request);
     LoginResponse login(LoginRequest request);
 }
