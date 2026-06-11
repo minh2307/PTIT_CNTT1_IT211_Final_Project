@@ -24,25 +24,53 @@ graph TD
 
 ## 2. Hướng dẫn Chạy ứng dụng
 
-### Bước 1: Khởi động Redis bằng Docker Compose
-Đảm bảo bạn đã cài đặt Docker và Docker Compose. Ở thư mục gốc của dự án, chạy lệnh:
+Có hai cách chính để khởi chạy ứng dụng: chạy toàn bộ hệ thống bằng Docker Compose (gồm App, MySQL, Redis) hoặc chạy độc lập.
+
+### Cách 1: Chạy toàn bộ stack bằng Docker Compose (Khuyến nghị)
+Đảm bảo bạn đã cài đặt Docker và Docker Compose. Ở thư mục gốc của dự án, bạn có hai lựa chọn khởi chạy:
+
+#### A. Khởi động thông thường (Chạy ngầm - Detached Mode)
 ```bash
 docker compose up -d
 ```
-Lệnh này sẽ khởi động container:
+Lệnh này sẽ khởi chạy 3 container:
+- **MySQL**: Chạy trên cổng `3306` (Dữ liệu được persist trong volume `mysql-data`).
 - **Redis**: Chạy trên cổng `6379`.
+- **Spring Boot App**: Chạy trên cổng `8080`.
 
-*(Lưu ý: MySQL đã được lược bỏ khỏi cấu hình Docker Compose để tiết kiệm RAM. Bạn hãy đảm bảo có dịch vụ MySQL chạy cục bộ trên máy hoặc môi trường khác phù hợp).*
-
-### Bước 2: Chạy Ứng dụng Spring Boot
-Dự án được cấu hình bằng **Gradle**. Bạn chạy lệnh sau để khởi động ứng dụng:
+#### B. Khởi động với tính năng Tự động cập nhật (Docker Compose Watch)
+Để tự động cập nhật code lên Docker khi bạn sửa đổi file trong thư mục `src`:
+1. Khởi động các container chạy ngầm trước:
+   ```bash
+   docker compose up -d
+   ```
+2. Kích hoạt trình giám sát thay đổi code:
+   ```bash
+   docker compose watch
+   ```
+*Hoặc khởi động đồng thời trên màn hình foreground:*
 ```bash
-# Sử dụng Gradle (khuyến nghị cho dự án này)
-./gradlew bootRun
-
-# Hoặc sử dụng Maven (nếu bạn chuyển đổi build tool)
-mvn spring-boot:run
+docker compose up --watch
 ```
+*Khi có bất kỳ thay đổi nào trong thư mục `src` hoặc file `build.gradle`, Docker Compose sẽ tự động nhận diện, chạy lại tiến trình build (chạy `./gradlew bootJar` trong Dockerfile) ở chế độ nền và cập nhật phiên bản mới nhất cho container `app` mà bạn không cần gõ lệnh build thủ công.*
+
+#### C. Xem Logs trên máy local (Host)
+Thư mục logs của ứng dụng đã được cấu hình đồng bộ trực tiếp ra máy local thông qua volume mapping. Toàn bộ log của ứng dụng chạy trong Docker sẽ tiếp tục ghi vào file:
+`logs/application.log` (tại thư mục gốc của dự án trên máy bạn).
+
+---
+
+### Cách 2: Chạy Spring Boot thủ công (Local)
+Nếu bạn chỉ muốn dùng Docker để chạy các dịch vụ phụ trợ (MySQL, Redis) và muốn chạy trực tiếp ứng dụng Java trên máy của mình:
+
+1. **Khởi động MySQL và Redis trên Docker:**
+   ```bash
+   docker compose up -d mysql redis
+   ```
+2. **Chạy ứng dụng Spring Boot bằng Gradle:**
+   ```bash
+   ./gradlew bootRun
+   ```
 
 ---
 

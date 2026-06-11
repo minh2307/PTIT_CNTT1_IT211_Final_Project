@@ -184,4 +184,53 @@ public class AuthControllerTest {
 
         verify(authenticationService, times(1)).resendOtp(any(ResendOtpRequest.class));
     }
+
+    @Test
+    void login_LockedAccount() throws Exception {
+        // Arrange
+        LoginRequest request = new LoginRequest("student@gmail.com", "Password@123");
+
+        when(authenticationService.login(any(LoginRequest.class)))
+                .thenThrow(new com.example.finalproject.exception.AppException(
+                        org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
+                        "Too many login attempts. Please try again after 5 minutes."));
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value(429))
+                .andExpect(jsonPath("$.message").value("Too many login attempts. Please try again after 5 minutes."));
+
+        verify(authenticationService, times(1)).login(any(LoginRequest.class));
+    }
+
+    @Test
+    void login_MissingEmail() throws Exception {
+        // Arrange
+        LoginRequest request = new LoginRequest("", "Password@123");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void login_MissingPassword() throws Exception {
+        // Arrange
+        LoginRequest request = new LoginRequest("student@gmail.com", "");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").exists());
+    }
 }

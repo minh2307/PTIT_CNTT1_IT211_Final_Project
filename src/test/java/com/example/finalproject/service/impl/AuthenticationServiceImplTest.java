@@ -10,6 +10,7 @@ import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.RefreshTokenService;
 import com.example.finalproject.service.OtpService;
 import com.example.finalproject.service.EmailService;
+import com.example.finalproject.service.LoginAttemptService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,6 +45,9 @@ public class AuthenticationServiceImplTest {
 
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private LoginAttemptService loginAttemptService;
 
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
@@ -214,5 +218,105 @@ public class AuthenticationServiceImplTest {
         AppException exception = assertThrows(AppException.class, () -> authenticationService.resendOtp(request));
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("Email does not exist", exception.getMessage());
+    }
+
+    @Test
+    void login_RateLimiting_Success() {
+        LoginRequest request = new LoginRequest("student@gmail.com", "Password@123");
+        User user = User.builder()
+                .email("student@gmail.com")
+                .password("encodedPassword")
+                .status("ACTIVE")
+                .role("STUDENT")
+                .build();
+
+        when(loginAttemptService.isLocked(request.getEmail())).thenReturn(false);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
+        when(jwtService.generateAccessToken(user.getEmail())).thenReturn("accessToken");
+        when(refreshTokenService.createRefreshToken(user)).thenReturn("refreshToken");
+        when(jwtService.getExpirationTimeSeconds()).thenReturn(3600L);
+
+        LoginResponse response = authenticationService.login(request);
+
+        assertNotNull(response);
+        verify(loginAttemptService, times(1)).isLocked(request.getEmail());
+        verify(loginAttemptService, times(1)).resetAttempts(request.getEmail());
+        verify(loginAttemptService, never()).failAttempt(anyString());
+    }
+
+    @Test
+    void login_RateLimiting_Fail_IncrementsAttempt() {
+        LoginRequest request = new LoginRequest("student@gmail.com", "wrongPassword");
+        User user = User.builder()
+                .email("student@gmail.com")
+                .password("encodedPassword")
+                .status("ACTIVE")
+                .build();
+
+        when(loginAttemptService.isLocked(request.getEmail())).thenReturn(false);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(false);
+
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.login(request));
+        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+
+        verify(loginAttemptService, times(1)).isLocked(request.getEmail());
+        verify(loginAttemptService, times(1)).failAttempt(request.getEmail());
+        verify(loginAttemptService, never()).resetAttempts(anyString());
+    }
+
+    @Test
+    void login_RateLimiting_AccountLocked() {
+        LoginRequest request = new LoginRequest("student@gmail.com", "Password@123");
+
+        when(loginAttemptService.isLocked(request.getEmail())).thenReturn(true);
+
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.login(request));
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, exception.getStatus());
+        assertEquals("Too many login attempts. Please try again after 5 minutes.", exception.getMessage());
+
+        verify(loginAttemptService, times(1)).isLocked(request.getEmail());
+        verify(userRepository, never()).findByEmail(anyString());
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void login_RateLimiting_ResetCounterAfterSuccess() {
+        LoginRequest request = new LoginRequest("student@gmail.com", "Password@123");
+        User user = User.builder()
+                .email("student@gmail.com")
+                .password("encodedPassword")
+                .status("ACTIVE")
+                .role("STUDENT")
+                .build();
+
+        when(loginAttemptService.isLocked(request.getEmail())).thenReturn(false);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
+        when(jwtService.generateAccessToken(user.getEmail())).thenReturn("accessToken");
+        when(refreshTokenService.createRefreshToken(user)).thenReturn("refreshToken");
+
+        authenticationService.login(request);
+
+        verify(loginAttemptService, times(1)).resetAttempts(request.getEmail());
+    }
+
+    @Test
+    void login_RateLimiting_IncrementAttemptOnFailedPassword() {
+        LoginRequest request = new LoginRequest("student@gmail.com", "wrongPassword");
+        User user = User.builder()
+                .email("student@gmail.com")
+                .password("encodedPassword")
+                .status("ACTIVE")
+                .build();
+
+        when(loginAttemptService.isLocked(request.getEmail())).thenReturn(false);
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(false);
+
+        assertThrows(AppException.class, () -> authenticationService.login(request));
+
+        verify(loginAttemptService, times(1)).failAttempt(request.getEmail());
     }
 }
