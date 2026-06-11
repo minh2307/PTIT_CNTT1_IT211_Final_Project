@@ -39,7 +39,7 @@
           "response": []
         },
         {
-          "name": "Login",
+          "name": "Login Student",
           "event": [
             {
               "listen": "test",
@@ -70,6 +70,102 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"student@gmail.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login Lecturer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.result) {",
+                  "    if (jsonData.result.accessToken) {",
+                  "        pm.environment.set(\"accessToken\", jsonData.result.accessToken);",
+                  "    }",
+                  "    if (jsonData.result.refreshToken) {",
+                  "        pm.environment.set(\"refreshToken\", jsonData.result.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lecturer@gmail.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.result) {",
+                  "    if (jsonData.result.accessToken) {",
+                  "        pm.environment.set(\"accessToken\", jsonData.result.accessToken);",
+                  "    }",
+                  "    if (jsonData.result.refreshToken) {",
+                  "        pm.environment.set(\"refreshToken\", jsonData.result.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"Password@123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",

@@ -34,10 +34,10 @@ public class User {
     private String phoneNumber;
 
     @Column(name = "role", nullable = false)
-    private String role; // String directly instead of Enum (e.g., "STUDENT", "TEACHER", "ADMIN")
+    private String role; // (e.g., "STUDENT", "TEACHER", "ADMIN")
 
     @Column(name = "status", nullable = false)
-    private String status; // String directly (e.g., "ACTIVE", "INACTIVE")
+    private String status; // (e.g., "ACTIVE", "INACTIVE")
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_room_id")

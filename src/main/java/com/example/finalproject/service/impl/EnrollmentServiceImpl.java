@@ -55,7 +55,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 .course(course)
                 .status("ENROLLED")
                 .build();
-
+        
+        //  loix giang buoc
         enrollmentRepository.save(enrollment);
     }
 

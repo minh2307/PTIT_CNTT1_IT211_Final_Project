@@ -143,6 +143,9 @@
 INSERT IGNORE INTO users (full_name, email, password, role, status)
 VALUES ('System Admin', 'admin@gmail.com', '$2a$10$BpoxNmtxjjy/dTVRITcuj.OxE4p1EkVDSZRuDafEYLfABcc43cJ2C', 'ADMIN', 'ACTIVE');
 
+INSERT IGNORE INTO users (full_name, email, password, role, status)
+VALUES ('System Lecturer', 'lecturer@gmail.com', '$2a$10$BpoxNmtxjjy/dTVRITcuj.OxE4p1EkVDSZRuDafEYLfABcc43cJ2C', 'LECTURER', 'ACTIVE');
+
 INSERT IGNORE INTO courses (id, course_code, course_name, description, max_students, status)
 VALUES 
 (1, 'CS101', 'Introduction to Java programming', 'Basic Java concepts, variables, loops, OOP', 50, 'OPEN'),

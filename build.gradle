@@ -49,6 +49,11 @@ dependencies {
 
     // Jakarta Servlet API
     implementation 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+
+    // Source: https://mvnrepository.com/artifact/com.cloudinary/cloudinary-core
+    implementation 'com.cloudinary:cloudinary-core:1.38.0'
+    // Source: https://mvnrepository.com/artifact/com.cloudinary/cloudinary-http44
+    implementation 'com.cloudinary:cloudinary-http44:1.39.0'
 }
 
 tasks.named('test') {

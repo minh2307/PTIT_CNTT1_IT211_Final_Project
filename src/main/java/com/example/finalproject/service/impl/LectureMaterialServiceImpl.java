@@ -11,7 +11,7 @@ import com.example.finalproject.repository.CourseRepository;
 import com.example.finalproject.repository.EnrollmentRepository;
 import com.example.finalproject.repository.LectureMaterialRepository;
 import com.example.finalproject.repository.UserRepository;
-import com.example.finalproject.service.FileStorageService;
+import com.example.finalproject.service.CloudinaryService;
 import com.example.finalproject.service.LectureMaterialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,7 +33,7 @@ public class LectureMaterialServiceImpl implements LectureMaterialService {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
-    private final FileStorageService fileStorageService;
+    private final CloudinaryService cloudinaryService;
     private final LectureMaterialMapper lectureMaterialMapper;
 
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("pdf", "docx", "pptx", "zip");
@@ -78,7 +78,7 @@ public class LectureMaterialServiceImpl implements LectureMaterialService {
         }
 
         // Save file
-        String fileUrl = fileStorageService.storeFile(request.getFile());
+        String fileUrl = cloudinaryService.uploadFile(request.getFile());
 
         LectureMaterial material = LectureMaterial.builder()
                 .title(request.getTitle())

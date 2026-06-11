@@ -10,7 +10,7 @@ import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.ProjectRepository;
 import com.example.finalproject.repository.SubmissionRepository;
 import com.example.finalproject.repository.UserRepository;
-import com.example.finalproject.service.FileStorageService;
+import com.example.finalproject.service.CloudinaryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,7 +38,7 @@ public class SubmissionServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
-    private FileStorageService fileStorageService;
+    private CloudinaryService cloudinaryService;
 
     @Mock
     private SubmissionMapper submissionMapper;

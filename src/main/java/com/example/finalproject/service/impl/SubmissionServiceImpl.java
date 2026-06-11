@@ -10,7 +10,7 @@ import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.ProjectRepository;
 import com.example.finalproject.repository.SubmissionRepository;
 import com.example.finalproject.repository.UserRepository;
-import com.example.finalproject.service.FileStorageService;
+import com.example.finalproject.service.CloudinaryService;
 import com.example.finalproject.service.SubmissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,7 +29,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final SubmissionRepository submissionRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
-    private final FileStorageService fileStorageService;
+    private final CloudinaryService cloudinaryService;
     private final SubmissionMapper submissionMapper;
 
     private static final Pattern GITHUB_URL_PATTERN = Pattern.compile("^https://(www\\.)?github\\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+/?$");
@@ -73,7 +73,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         String fileUrl = null;
         if (hasFile) {
-            fileUrl = fileStorageService.storeFile(request.getFile());
+            fileUrl = cloudinaryService.uploadFile(request.getFile());
         }
 
         Submission submission = Submission.builder()
