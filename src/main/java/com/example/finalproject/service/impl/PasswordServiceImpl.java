@@ -4,9 +4,7 @@ import com.example.finalproject.exception.AppException;
 import com.example.finalproject.model.dto.request.ChangePasswordRequest;
 import com.example.finalproject.model.dto.request.ForgotPasswordRequest;
 import com.example.finalproject.model.dto.request.ResetPasswordRequest;
-import com.example.finalproject.model.entity.PasswordResetToken;
 import com.example.finalproject.model.entity.User;
-import com.example.finalproject.repository.PasswordResetTokenRepository;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.MailService;
@@ -15,6 +13,7 @@ import com.example.finalproject.service.RedisBlacklistService;
 import com.example.finalproject.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -31,12 +31,14 @@ import java.util.UUID;
 public class PasswordServiceImpl implements PasswordService {
 
     private final UserRepository userRepository;
-    private final PasswordResetTokenRepository tokenRepository;
+    private final RedisTemplate<String, String> redisTemplate;
     private final RedisBlacklistService redisBlacklistService;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final MailService mailService;
     private final JwtService jwtService;
+
+    private static final String RESET_PASSWORD_KEY_PREFIX = "password_reset_token:";
 
     @Override
     @Transactional
@@ -90,18 +92,16 @@ public class PasswordServiceImpl implements PasswordService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Email does not exist"));
 
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Your account has been deactivated");
+        }
+
         // Generate reset token
         String tokenStr = UUID.randomUUID().toString();
-        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(15);
+        String redisKey = RESET_PASSWORD_KEY_PREFIX + tokenStr;
 
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token(tokenStr)
-                .expiredAt(expiredAt)
-                .used(false)
-                .user(user)
-                .build();
-
-        tokenRepository.save(resetToken);
+        // Save to Redis with 15 minutes expiration
+        redisTemplate.opsForValue().set(redisKey, user.getEmail(), 15, TimeUnit.MINUTES);
 
         // Send Email
         String resetLink = "http://localhost:3000/reset-password?token=" + tokenStr;
@@ -113,30 +113,29 @@ public class PasswordServiceImpl implements PasswordService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetToken resetToken = tokenRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "Token invalid"));
-
-        if (resetToken.isUsed()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Token already used");
+        String redisKey = RESET_PASSWORD_KEY_PREFIX + request.getToken();
+        String email = redisTemplate.opsForValue().get(redisKey);
+        if (email == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Token invalid or expired");
         }
 
-        if (resetToken.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Token expired");
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User associated with this token does not exist"));
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Your account has been deactivated");
         }
 
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Confirm password does not match");
         }
 
-        User user = resetToken.getUser();
-
         // Update password
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Mark token as used
-        resetToken.setUsed(true);
-        tokenRepository.save(resetToken);
+        // Delete key from Redis to mark it as used
+        redisTemplate.delete(redisKey);
 
         // Revoke all refresh tokens for the user
         refreshTokenService.revokeAllUserTokens(user);

@@ -4,25 +4,26 @@ import com.example.finalproject.exception.AppException;
 import com.example.finalproject.model.dto.request.ChangePasswordRequest;
 import com.example.finalproject.model.dto.request.ForgotPasswordRequest;
 import com.example.finalproject.model.dto.request.ResetPasswordRequest;
-import com.example.finalproject.model.entity.PasswordResetToken;
 import com.example.finalproject.model.entity.User;
-import com.example.finalproject.repository.PasswordResetTokenRepository;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.MailService;
 import com.example.finalproject.service.RedisBlacklistService;
 import com.example.finalproject.service.RefreshTokenService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -35,7 +36,10 @@ public class PasswordServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
-    private PasswordResetTokenRepository tokenRepository;
+    private RedisTemplate<String, String> redisTemplate;
+
+    @Mock
+    private ValueOperations<String, String> valueOperations;
 
     @Mock
     private RedisBlacklistService redisBlacklistService;
@@ -54,6 +58,12 @@ public class PasswordServiceImplTest {
 
     @InjectMocks
     private PasswordServiceImpl passwordService;
+
+    @BeforeEach
+    void setUp() {
+        // We use lenient() since not all tests require redisTemplate.opsForValue()
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+    }
 
     @Test
     void changePassword_Success() {
@@ -173,13 +183,19 @@ public class PasswordServiceImplTest {
 
         User user = User.builder()
                 .email("student@gmail.com")
+                .status("ACTIVE")
                 .build();
 
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
 
         assertDoesNotThrow(() -> passwordService.forgotPassword(request));
 
-        verify(tokenRepository, times(1)).save(any(PasswordResetToken.class));
+        verify(valueOperations, times(1)).set(
+                startsWith("password_reset_token:"),
+                eq("student@gmail.com"),
+                eq(15L),
+                eq(TimeUnit.MINUTES)
+        );
         verify(mailService, times(1)).sendPasswordResetEmail(eq("student@gmail.com"), any(String.class));
     }
 
@@ -205,81 +221,35 @@ public class PasswordServiceImplTest {
                 .build();
 
         User user = User.builder()
+                .id(1L)
                 .email("student@gmail.com")
+                .status("ACTIVE")
                 .build();
 
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token("validTokenStr")
-                .expiredAt(LocalDateTime.now().plusMinutes(5))
-                .used(false)
-                .user(user)
-                .build();
-
-        when(tokenRepository.findByToken(request.getToken())).thenReturn(Optional.of(resetToken));
+        when(valueOperations.get("password_reset_token:validTokenStr")).thenReturn("student@gmail.com");
+        when(userRepository.findByEmail("student@gmail.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.encode(request.getNewPassword())).thenReturn("encodedNewPass");
 
         assertDoesNotThrow(() -> passwordService.resetPassword(request));
 
-        assertTrue(resetToken.isUsed());
         verify(userRepository, times(1)).save(user);
-        verify(tokenRepository, times(1)).save(resetToken);
+        verify(redisTemplate, times(1)).delete("password_reset_token:validTokenStr");
         verify(refreshTokenService, times(1)).revokeAllUserTokens(user);
     }
 
     @Test
-    void resetPassword_TokenNotFound_ThrowsAppException() {
+    void resetPassword_TokenNotFoundOrExpired_ThrowsAppException() {
         ResetPasswordRequest request = ResetPasswordRequest.builder()
                 .token("invalidTokenStr")
                 .newPassword("NewPass@123")
                 .confirmPassword("NewPass@123")
                 .build();
 
-        when(tokenRepository.findByToken(request.getToken())).thenReturn(Optional.empty());
+        when(valueOperations.get("password_reset_token:invalidTokenStr")).thenReturn(null);
 
         AppException exception = assertThrows(AppException.class, () -> passwordService.resetPassword(request));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
-        assertEquals("Token invalid", exception.getMessage());
-    }
-
-    @Test
-    void resetPassword_TokenAlreadyUsed_ThrowsAppException() {
-        ResetPasswordRequest request = ResetPasswordRequest.builder()
-                .token("usedTokenStr")
-                .newPassword("NewPass@123")
-                .confirmPassword("NewPass@123")
-                .build();
-
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token("usedTokenStr")
-                .used(true)
-                .build();
-
-        when(tokenRepository.findByToken(request.getToken())).thenReturn(Optional.of(resetToken));
-
-        AppException exception = assertThrows(AppException.class, () -> passwordService.resetPassword(request));
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
-        assertEquals("Token already used", exception.getMessage());
-    }
-
-    @Test
-    void resetPassword_TokenExpired_ThrowsAppException() {
-        ResetPasswordRequest request = ResetPasswordRequest.builder()
-                .token("expiredTokenStr")
-                .newPassword("NewPass@123")
-                .confirmPassword("NewPass@123")
-                .build();
-
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token("expiredTokenStr")
-                .expiredAt(LocalDateTime.now().minusMinutes(1))
-                .used(false)
-                .build();
-
-        when(tokenRepository.findByToken(request.getToken())).thenReturn(Optional.of(resetToken));
-
-        AppException exception = assertThrows(AppException.class, () -> passwordService.resetPassword(request));
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
-        assertEquals("Token expired", exception.getMessage());
+        assertEquals("Token invalid or expired", exception.getMessage());
     }
 
     @Test
@@ -290,13 +260,13 @@ public class PasswordServiceImplTest {
                 .confirmPassword("DifferentConfirmPass")
                 .build();
 
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token("validTokenStr")
-                .expiredAt(LocalDateTime.now().plusMinutes(5))
-                .used(false)
+        User user = User.builder()
+                .email("student@gmail.com")
+                .status("ACTIVE")
                 .build();
 
-        when(tokenRepository.findByToken(request.getToken())).thenReturn(Optional.of(resetToken));
+        when(valueOperations.get("password_reset_token:validTokenStr")).thenReturn("student@gmail.com");
+        when(userRepository.findByEmail("student@gmail.com")).thenReturn(Optional.of(user));
 
         AppException exception = assertThrows(AppException.class, () -> passwordService.resetPassword(request));
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());

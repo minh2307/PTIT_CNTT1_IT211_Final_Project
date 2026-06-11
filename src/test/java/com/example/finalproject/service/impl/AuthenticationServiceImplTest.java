@@ -8,6 +8,8 @@ import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.RefreshTokenService;
+import com.example.finalproject.service.OtpService;
+import com.example.finalproject.service.EmailService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +38,12 @@ public class AuthenticationServiceImplTest {
 
     @Mock
     private RefreshTokenService refreshTokenService;
+
+    @Mock
+    private OtpService otpService;
+
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private AuthenticationServiceImpl authenticationService;
@@ -150,5 +158,61 @@ public class AuthenticationServiceImplTest {
         AppException exception = assertThrows(AppException.class, () -> authenticationService.login(request));
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatus());
         assertEquals("Your account has been deactivated", exception.getMessage());
+    }
+
+    @Test
+    void login_Lecturer_RequiresOtp() {
+        LoginRequest request = new LoginRequest("lecturer@gmail.com", "Password@123");
+        User user = User.builder()
+                .email("lecturer@gmail.com")
+                .password("encodedPassword")
+                .status("ACTIVE")
+                .role("LECTURER")
+                .build();
+
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
+        when(otpService.generateOtp(user.getEmail())).thenReturn("123456");
+
+        LoginResponse response = authenticationService.login(request);
+
+        assertNotNull(response);
+        assertEquals("OTP_REQUIRED", response.getStatus());
+        assertEquals("OTP has been sent to your email", response.getMessage());
+        assertEquals("lecturer@gmail.com", response.getEmail());
+        assertEquals("LECTURER", response.getRole());
+        assertNull(response.getAccessToken());
+
+        verify(otpService, times(1)).generateOtp(user.getEmail());
+        verify(emailService, times(1)).sendOtpEmail(user.getEmail(), "123456");
+    }
+
+    @Test
+    void resendOtp_Success() {
+        com.example.finalproject.model.dto.request.ResendOtpRequest request = 
+                new com.example.finalproject.model.dto.request.ResendOtpRequest("lecturer@gmail.com");
+        User user = User.builder()
+                .email("lecturer@gmail.com")
+                .status("ACTIVE")
+                .role("LECTURER")
+                .build();
+
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+
+        assertDoesNotThrow(() -> authenticationService.resendOtp(request));
+
+        verify(otpService, times(1)).resendOtp(request.getEmail());
+    }
+
+    @Test
+    void resendOtp_EmailDoesNotExist_ThrowsAppException() {
+        com.example.finalproject.model.dto.request.ResendOtpRequest request = 
+                new com.example.finalproject.model.dto.request.ResendOtpRequest("nonexistent@gmail.com");
+
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
+
+        AppException exception = assertThrows(AppException.class, () -> authenticationService.resendOtp(request));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals("Email does not exist", exception.getMessage());
     }
 }

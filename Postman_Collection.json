@@ -87,7 +87,53 @@
           "response": []
         },
         {
-          "name": "Login Lecturer",
+          "name": "Login Lecturer (OTP Required)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Status is OTP_REQUIRED\", function () {",
+                  "    pm.expect(jsonData.result.status).to.eql(\"OTP_REQUIRED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lecturer@gmail.com\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
           "event": [
             {
               "listen": "test",
@@ -117,10 +163,10 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"lecturer@gmail.com\",\n  \"password\": \"Password@123\"\n}"
+              "raw": "{\n  \"email\": \"lecturer@gmail.com\",\n  \"otp\": \"123456\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "raw": "{{baseUrl}}/api/v1/auth/verify-otp",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -128,7 +174,36 @@
                 "api",
                 "v1",
                 "auth",
-                "login"
+                "verify-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lecturer@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/resend-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "resend-otp"
               ]
             }
           },

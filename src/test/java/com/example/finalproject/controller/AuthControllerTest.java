@@ -2,7 +2,10 @@ package com.example.finalproject.controller;
 
 import com.example.finalproject.model.dto.request.LoginRequest;
 import com.example.finalproject.model.dto.request.UserRegisterRequest;
+import com.example.finalproject.model.dto.request.VerifyOtpRequest;
+import com.example.finalproject.model.dto.request.ResendOtpRequest;
 import com.example.finalproject.model.dto.response.LoginResponse;
+import com.example.finalproject.model.dto.response.VerifyOtpResponse;
 import com.example.finalproject.security.CustomAccessDeniedHandler;
 import com.example.finalproject.security.CustomAuthenticationEntryPoint;
 import com.example.finalproject.security.jwt.JwtAuthenticationFilter;
@@ -10,6 +13,7 @@ import com.example.finalproject.service.AuthenticationService;
 import com.example.finalproject.service.LogoutService;
 import com.example.finalproject.service.PasswordService;
 import com.example.finalproject.service.RefreshTokenService;
+import com.example.finalproject.service.VerifyOtpService;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +51,9 @@ public class AuthControllerTest {
 
     @MockitoBean
     private PasswordService passwordService;
+
+    @MockitoBean
+    private VerifyOtpService verifyOtpService;
 
     // Mocks for Spring Security config compatibility in @WebMvcTest
     @MockitoBean
@@ -130,5 +137,51 @@ public class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value("Register success"));
 
         verify(authenticationService, times(1)).register(any(UserRegisterRequest.class));
+    }
+
+    @Test
+    void verifyOtp_Success() throws Exception {
+        // Arrange
+        VerifyOtpRequest request = new VerifyOtpRequest("lecturer@gmail.com", "123456");
+        VerifyOtpResponse response = VerifyOtpResponse.builder()
+                .accessToken("accessToken123")
+                .refreshToken("refreshToken123")
+                .tokenType("Bearer")
+                .expiresIn(3600)
+                .email("lecturer@gmail.com")
+                .role("LECTURER")
+                .build();
+
+        when(verifyOtpService.verifyOtp(any(VerifyOtpRequest.class))).thenReturn(response);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("OTP verified successfully"))
+                .andExpect(jsonPath("$.result.accessToken").value("accessToken123"))
+                .andExpect(jsonPath("$.result.role").value("LECTURER"));
+
+        verify(verifyOtpService, times(1)).verifyOtp(any(VerifyOtpRequest.class));
+    }
+
+    @Test
+    void resendOtp_Success() throws Exception {
+        // Arrange
+        ResendOtpRequest request = new ResendOtpRequest("lecturer@gmail.com");
+
+        doNothing().when(authenticationService).resendOtp(any(ResendOtpRequest.class));
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/auth/resend-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("OTP has been resent to your email"));
+
+        verify(authenticationService, times(1)).resendOtp(any(ResendOtpRequest.class));
     }
 }

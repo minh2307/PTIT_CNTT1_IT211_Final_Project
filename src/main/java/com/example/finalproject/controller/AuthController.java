@@ -5,13 +5,17 @@ import com.example.finalproject.model.dto.request.LoginRequest;
 import com.example.finalproject.model.dto.request.RefreshTokenRequest;
 import com.example.finalproject.model.dto.request.ResetPasswordRequest;
 import com.example.finalproject.model.dto.request.UserRegisterRequest;
+import com.example.finalproject.model.dto.request.VerifyOtpRequest;
+import com.example.finalproject.model.dto.request.ResendOtpRequest;
 import com.example.finalproject.model.dto.response.ApiResponse;
 import com.example.finalproject.model.dto.response.LoginResponse;
 import com.example.finalproject.model.dto.response.RefreshTokenResponse;
+import com.example.finalproject.model.dto.response.VerifyOtpResponse;
 import com.example.finalproject.service.AuthenticationService;
 import com.example.finalproject.service.LogoutService;
 import com.example.finalproject.service.PasswordService;
 import com.example.finalproject.service.RefreshTokenService;
+import com.example.finalproject.service.VerifyOtpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,6 +31,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final LogoutService logoutService;
     private final PasswordService passwordService;
+    private final VerifyOtpService verifyOtpService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody UserRegisterRequest request) {
@@ -67,6 +72,20 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         passwordService.resetPassword(request);
         ApiResponse<Void> response = ApiResponse.success(200, "Password reset successfully");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<VerifyOtpResponse>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        VerifyOtpResponse verifyOtpResponse = verifyOtpService.verifyOtp(request);
+        ApiResponse<VerifyOtpResponse> response = ApiResponse.success(200, "OTP verified successfully", verifyOtpResponse);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        authenticationService.resendOtp(request);
+        ApiResponse<Void> response = ApiResponse.success(200, "OTP has been resent to your email");
         return ResponseEntity.ok(response);
     }
 }

@@ -1,6 +1,5 @@
 package com.example.finalproject.model.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 
 @Getter
@@ -8,15 +7,12 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class LoginResponse {
-    private String status;
-    private String message;
+public class VerifyOtpResponse {
     private String accessToken;
     private String refreshToken;
     @Builder.Default
     private String tokenType = "Bearer";
-    private Long expiresIn;
+    private long expiresIn;
     private String email;
     private String role;
 }
