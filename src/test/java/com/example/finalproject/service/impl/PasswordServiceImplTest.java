@@ -5,13 +5,12 @@ import com.example.finalproject.model.dto.request.ChangePasswordRequest;
 import com.example.finalproject.model.dto.request.ForgotPasswordRequest;
 import com.example.finalproject.model.dto.request.ResetPasswordRequest;
 import com.example.finalproject.model.entity.PasswordResetToken;
-import com.example.finalproject.model.entity.TokenBlacklist;
 import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.PasswordResetTokenRepository;
-import com.example.finalproject.repository.TokenBlacklistRepository;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.MailService;
+import com.example.finalproject.service.RedisBlacklistService;
 import com.example.finalproject.service.RefreshTokenService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +38,7 @@ public class PasswordServiceImplTest {
     private PasswordResetTokenRepository tokenRepository;
 
     @Mock
-    private TokenBlacklistRepository tokenBlacklistRepository;
+    private RedisBlacklistService redisBlacklistService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -74,14 +73,14 @@ public class PasswordServiceImplTest {
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getOldPassword(), user.getPassword())).thenReturn(true);
         when(passwordEncoder.encode(request.getNewPassword())).thenReturn("encodedNewPass");
-        when(tokenBlacklistRepository.existsByToken("token123")).thenReturn(false);
+        when(redisBlacklistService.isBlacklisted("token123")).thenReturn(false);
         when(jwtService.getExpirationDateFromToken("token123")).thenReturn(new Date(System.currentTimeMillis() + 3600000));
 
         assertDoesNotThrow(() -> passwordService.changePassword(request, email, authHeader));
 
         verify(userRepository, times(1)).save(user);
         verify(refreshTokenService, times(1)).revokeAllUserTokens(user);
-        verify(tokenBlacklistRepository, times(1)).save(any(TokenBlacklist.class));
+        verify(redisBlacklistService, times(1)).blacklistToken(eq("token123"), anyLong());
     }
 
     @Test

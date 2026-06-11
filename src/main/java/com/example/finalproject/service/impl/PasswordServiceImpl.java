@@ -5,14 +5,13 @@ import com.example.finalproject.model.dto.request.ChangePasswordRequest;
 import com.example.finalproject.model.dto.request.ForgotPasswordRequest;
 import com.example.finalproject.model.dto.request.ResetPasswordRequest;
 import com.example.finalproject.model.entity.PasswordResetToken;
-import com.example.finalproject.model.entity.TokenBlacklist;
 import com.example.finalproject.model.entity.User;
 import com.example.finalproject.repository.PasswordResetTokenRepository;
-import com.example.finalproject.repository.TokenBlacklistRepository;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.MailService;
 import com.example.finalproject.service.PasswordService;
+import com.example.finalproject.service.RedisBlacklistService;
 import com.example.finalproject.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 import java.util.UUID;
 
@@ -34,7 +32,7 @@ public class PasswordServiceImpl implements PasswordService {
 
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
-    private final TokenBlacklistRepository tokenBlacklistRepository;
+    private final RedisBlacklistService redisBlacklistService;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final MailService mailService;
@@ -68,17 +66,12 @@ public class PasswordServiceImpl implements PasswordService {
         // Blacklist current access token if present
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            if (!tokenBlacklistRepository.existsByToken(token)) {
+            if (!redisBlacklistService.isBlacklisted(token)) {
                 try {
                     Date expiryDate = jwtService.getExpirationDateFromToken(token);
-                    LocalDateTime expiredAt = LocalDateTime.ofInstant(expiryDate.toInstant(), ZoneId.systemDefault());
+                    long ttlInMs = expiryDate.getTime() - System.currentTimeMillis();
 
-                    TokenBlacklist blacklistEntry = TokenBlacklist.builder()
-                            .token(token)
-                            .expiredAt(expiredAt)
-                            .build();
-
-                    tokenBlacklistRepository.save(blacklistEntry);
+                    redisBlacklistService.blacklistToken(token, ttlInMs);
                     log.info("Blacklisted current access token for user {}", email);
                 } catch (Exception e) {
                     log.warn("Could not extract expiry from token for blacklisting: {}", e.getMessage());

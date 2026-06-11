@@ -1,11 +1,10 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
-import com.example.finalproject.model.entity.TokenBlacklist;
 import com.example.finalproject.model.entity.User;
-import com.example.finalproject.repository.TokenBlacklistRepository;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
+import com.example.finalproject.service.RedisBlacklistService;
 import com.example.finalproject.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,7 @@ import static org.mockito.Mockito.*;
 public class LogoutServiceImplTest {
 
     @Mock
-    private TokenBlacklistRepository tokenBlacklistRepository;
+    private RedisBlacklistService redisBlacklistService;
 
     @Mock
     private RefreshTokenService refreshTokenService;
@@ -53,14 +52,14 @@ public class LogoutServiceImplTest {
         Date expiryDate = new Date(System.currentTimeMillis() + 15 * 60 * 1000L);
 
         when(jwtService.validateToken("validAccessToken")).thenReturn(true);
-        when(tokenBlacklistRepository.existsByToken("validAccessToken")).thenReturn(false);
+        when(redisBlacklistService.isBlacklisted("validAccessToken")).thenReturn(false);
         when(jwtService.getExpirationDateFromToken("validAccessToken")).thenReturn(expiryDate);
         when(jwtService.getUsernameFromToken("validAccessToken")).thenReturn("test@gmail.com");
         when(userRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(user));
 
         assertDoesNotThrow(() -> logoutService.logout(authHeader));
 
-        verify(tokenBlacklistRepository, times(1)).save(any(TokenBlacklist.class));
+        verify(redisBlacklistService, times(1)).blacklistToken(eq("validAccessToken"), anyLong());
         verify(refreshTokenService, times(1)).revokeAllUserTokens(user);
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }

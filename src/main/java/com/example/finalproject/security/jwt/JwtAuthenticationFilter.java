@@ -1,6 +1,6 @@
 package com.example.finalproject.security.jwt;
 
-import com.example.finalproject.repository.TokenBlacklistRepository;
+import com.example.finalproject.service.RedisBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final TokenBlacklistRepository tokenBlacklistRepository;
+    private final RedisBlacklistService redisBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -33,10 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = getTokenFromRequest(request);
 
         if (token != null) {
-            // Check if token is blacklisted
-            if (tokenBlacklistRepository.existsByToken(token)) {
-                log.warn("JWT Token is blacklisted: {}", token);
-            } else if (jwtService.validateToken(token)) {
+            if (jwtService.validateToken(token)) {
+                if (redisBlacklistService.isBlacklisted(token)) {
+                    log.warn("JWT Token is blacklisted: {}", token);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"code\":401,\"message\":\"Token is blacklisted\"}");
+                    return;
+                }
                 String username = jwtService.getUsernameFromToken(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 

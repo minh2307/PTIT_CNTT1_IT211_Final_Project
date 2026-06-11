@@ -1,12 +1,11 @@
 package com.example.finalproject.service.impl;
 
 import com.example.finalproject.exception.AppException;
-import com.example.finalproject.model.entity.TokenBlacklist;
 import com.example.finalproject.model.entity.User;
-import com.example.finalproject.repository.TokenBlacklistRepository;
 import com.example.finalproject.repository.UserRepository;
 import com.example.finalproject.security.jwt.JwtService;
 import com.example.finalproject.service.LogoutService;
+import com.example.finalproject.service.RedisBlacklistService;
 import com.example.finalproject.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,15 +13,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
 public class LogoutServiceImpl implements LogoutService {
 
-    private final TokenBlacklistRepository tokenBlacklistRepository;
+    private final RedisBlacklistService redisBlacklistService;
     private final RefreshTokenService refreshTokenService;
     private final UserRepository userRepository;
     private final JwtService jwtService;
@@ -41,16 +38,10 @@ public class LogoutServiceImpl implements LogoutService {
         }
 
         // Add to blacklist if not already blacklisted
-        if (!tokenBlacklistRepository.existsByToken(token)) {
+        if (!redisBlacklistService.isBlacklisted(token)) {
             Date expiryDate = jwtService.getExpirationDateFromToken(token);
-            LocalDateTime expiredAt = LocalDateTime.ofInstant(expiryDate.toInstant(), ZoneId.systemDefault());
-
-            TokenBlacklist blacklistEntry = TokenBlacklist.builder()
-                    .token(token)
-                    .expiredAt(expiredAt)
-                    .build();
-
-            tokenBlacklistRepository.save(blacklistEntry);
+            long ttlInMs = expiryDate.getTime() - System.currentTimeMillis();
+            redisBlacklistService.blacklistToken(token, ttlInMs);
         }
 
         // Revoke all refresh tokens for the user

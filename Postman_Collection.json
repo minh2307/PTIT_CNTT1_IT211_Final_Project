@@ -237,6 +237,7 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.environment.set(\"blacklistedToken\", pm.environment.get(\"accessToken\"));",
                   "pm.environment.unset(\"accessToken\");",
                   "pm.environment.unset(\"refreshToken\");"
                 ],
@@ -268,7 +269,73 @@
           "response": []
         },
         {
+          "name": "Test Token Blacklist (Expected 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Response contains blacklist message\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include(\"Token is blacklisted\");",
+                  "});",
+                  "pm.environment.unset(\"blacklistedToken\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{blacklistedToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/student/enrollments?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "student",
+                "enrollments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Change Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.environment.set(\"blacklistedTokenAfterPwdChange\", pm.environment.get(\"accessToken\"));",
+                  "pm.environment.unset(\"accessToken\");",
+                  "pm.environment.unset(\"refreshToken\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -295,6 +362,59 @@
                 "v1",
                 "users",
                 "change-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Token Blacklist After Password Change (Expected 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Response contains blacklist message\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include(\"Token is blacklisted\");",
+                  "});",
+                  "pm.environment.unset(\"blacklistedTokenAfterPwdChange\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{blacklistedTokenAfterPwdChange}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/student/enrollments?page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "student",
+                "enrollments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
               ]
             }
           },

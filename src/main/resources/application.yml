@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: final-project
+  datasource:
+    url: jdbc:mysql://localhost:3306/student_db?createDatabaseIfNotExist=true
+    username: root
+    password: '123456'
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  sql:
+    init:
+      mode: always
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: minh23923@gmail.com
+    password: nsfxgpzxzqbpoqvz
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  secret-key: thisisasecretkeythatisatleastthirtytwocharacterslong
+  expired: 86400000
+
+cloudinary:
+  cloud-name: dvekkwf3a
+  api-key: '411361435277295'
+  api-secret: H30i0wVLvAmy8iZ5BYDuM7VYV0M
